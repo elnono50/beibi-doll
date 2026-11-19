@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { HangTag } from "@/components/HangTag";
+import { isDemo } from "@/lib/config";
 import { browserClient } from "@/lib/supabase/browser";
 
 export function ResetForm({ after = "/admin", path = "/admin/restablecer" }: { after?: string; path?: string }) {
@@ -12,6 +13,11 @@ export function ResetForm({ after = "/admin", path = "/admin/restablecer" }: { a
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    // En la vista previa no hay base conectada: se muestra el formulario sin verificar enlaces
+    if (isDemo) {
+      setReady("ok");
+      return;
+    }
     const sb = browserClient();
     const code = new URLSearchParams(window.location.search).get("code");
     (async () => {
@@ -33,6 +39,7 @@ export function ResetForm({ after = "/admin", path = "/admin/restablecer" }: { a
     const b = String(fd.get("confirm") ?? "");
     if (a.length < 10) return setMsg("Usá al menos 10 caracteres.");
     if (a !== b) return setMsg("Las contraseñas no coinciden.");
+    if (isDemo) return setMsg("Vista previa: la contraseña no se guarda.");
     setBusy(true);
     const { error } = await browserClient().auth.updateUser({ password: a });
     if (error) {

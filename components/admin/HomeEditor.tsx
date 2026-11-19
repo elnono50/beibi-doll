@@ -194,7 +194,7 @@ export function HomeEditor({ settings, categories, demo }: { settings: Settings;
       </section>
 
       <section className="panel">
-        <h2>Bloque “Del mar a la ciudad”</h2>
+        <h2>Bloque de la frase</h2>
         <div className="slide-card">
           <div style={{ display: "grid", gap: 8, alignContent: "start" }}>
             <div className="slide-card__pic">
@@ -205,7 +205,7 @@ export function HomeEditor({ settings, categories, demo }: { settings: Settings;
           </div>
           <div className="form-stack">
             <label className="field">
-              <span>Título</span>
+              <span>Frase grande</span>
               <input className="input" value={editorial.title} maxLength={80} onChange={(e) => setEditorial({ ...editorial, title: e.target.value })} />
             </label>
             <label className="field">

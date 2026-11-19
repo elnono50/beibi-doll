@@ -115,6 +115,7 @@
   flex-wrap: wrap;
 }
 .panel {
+  min-width: 0;
   background: var(--white);
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -197,6 +198,12 @@ a.stat:hover {
 .table-wrap {
   overflow-x: auto;
   margin-inline: -4px;
+}
+.atable--guide {
+  min-width: 560px;
+}
+.atable--guide td:first-child .input {
+  width: 76px;
 }
 .thumb {
   position: relative;
@@ -536,12 +543,15 @@ a.stat:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .two-col {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 860px) {
   .admin {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kind-picker {
+    grid-template-columns: minmax(0, 1fr);
   }
   .admin-side {
     position: sticky;
@@ -558,7 +568,7 @@ a.stat:hover {
     display: none;
   }
   .admin-side .logo {
-    font-size: 1.375rem;
+    font-size: 1.75rem;
     padding: 0;
     flex: none;
   }
@@ -581,17 +591,17 @@ a.stat:hover {
     flex: none;
   }
   .slide-card {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .slide-card__pic {
     max-width: 240px;
   }
   .row-2,
   .row-3 {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .kv {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2px;
   }
   .kv dd {
@@ -622,7 +632,7 @@ a.stat:hover {
 }
 @media (max-width: 1100px) {
   .composer {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .composer__preview {
     position: static;
@@ -632,7 +642,8 @@ a.stat:hover {
   }
 }
 .composer .dropzone--wide {
-  aspect-ratio: 3 / 1;
+  aspect-ratio: auto;
+  min-height: 120px;
 }
 .kind-picker {
   display: grid;
@@ -661,7 +672,7 @@ a.stat:hover {
 }
 .product-picker {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
   gap: 8px;
   max-height: 340px;
   overflow-y: auto;
@@ -717,7 +728,7 @@ a.stat:hover {
 }
 @media (max-width: 760px) {
   .kind-picker {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -935,11 +946,21 @@ a.stat:hover {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
-@media (max-width: 520px) {
+@media (max-width: 560px) {
+  /* "Hasta [peso] g" arriba y "[precio] Quitar" abajo */
   .tier {
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--line);
   }
-  .tier .input[aria-label^="Precio"] {
-    grid-column: 1 / -2;
+  .tier > .input:nth-of-type(2) {
+    grid-column: 1 / 3;
+  }
+  .tier:last-of-type {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    border-bottom: 0;
+  }
+  .tier:last-of-type > .input {
+    grid-column: auto;
   }
 }

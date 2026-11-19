@@ -118,6 +118,13 @@ button {
   color: #fff;
 }
 
+/* Red de seguridad: nada puede generar scroll horizontal en el celular
+   (clip no rompe el encabezado fijo como lo haría hidden) */
+html,
+body {
+  overflow-x: clip;
+}
+
 h1,
 h2,
 h3,
@@ -232,6 +239,13 @@ p {
   text-decoration: underline;
   text-decoration-color: var(--gold);
   text-underline-offset: 0.3em;
+}
+/* Botones con aspecto de enlace: área táctil cómoda en el celular sin cambiar cómo se ven */
+button.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-block: -10px;
 }
 .link:hover {
   text-decoration-color: var(--sea);
@@ -484,6 +498,8 @@ p {
   }
   .announce__item {
     grid-area: 1 / 1;
+    justify-self: center;
+    justify-content: center;
     opacity: 0;
     transition: opacity 0.6s;
   }
@@ -1102,7 +1118,7 @@ p {
 }
 @media (max-width: 860px) {
   .editorial {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .editorial__img {
     min-height: 0;
@@ -1133,7 +1149,7 @@ p {
 }
 @media (max-width: 760px) {
   .info {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 28px;
   }
 }
@@ -1368,7 +1384,7 @@ p {
 }
 @media (max-width: 860px) {
   .pdp {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     padding-top: 8px;
   }
   .gallery {
@@ -1861,7 +1877,7 @@ p {
 }
 @media (max-width: 640px) {
   .choices--2 {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 .ship-quote {
@@ -1970,7 +1986,7 @@ p {
 }
 @media (max-width: 960px) {
   .checkout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .summary {
     position: static;
@@ -2222,10 +2238,10 @@ p {
 }
 @media (max-width: 760px) {
   .news__inner {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .news__row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
   }
   .news__row .input {
@@ -2375,7 +2391,7 @@ p {
 }
 @media (max-width: 860px) {
   .account__grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -2427,7 +2443,7 @@ main:has(.tag-stage) + .news {
 }
 @media (max-width: 420px) {
   .stock-alert__row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .stock-alert__row .select {
     width: 100%;

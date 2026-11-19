@@ -44,7 +44,7 @@ export const DEFAULT_SETTINGS: Settings = {
   editorial: {
     image: u("1576193929684-06c6c6a8b582"),
     image_alt: "Chica con campera de cuero negra y gorro",
-    title: "Nada de ropa aburrida",
+    title: "La vida es muy corta para llevar ropa aburrida",
     text: "Elegimos cada prenda una por una: lo que se usa ahora, en cantidades chicas para que no te cruces a nadie igual. Si algo se agota, avisanos y te escribimos cuando vuelva.",
   },
   shipping: {

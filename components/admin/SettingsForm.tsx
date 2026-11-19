@@ -286,9 +286,9 @@ export function SettingsForm({ settings, mpReady }: { settings: Settings; mpRead
 
       <section className="panel">
         <h2>Guía de talles</h2>
-        <p className="panel__hint">Medidas del cuerpo en centímetros.</p>
+        <p className="panel__hint">Medidas del cuerpo en centímetros. En el celular deslizá la tabla hacia los costados.</p>
         <div className="table-wrap">
-          <table className="atable">
+          <table className="atable atable--guide">
             <thead>
               <tr>
                 <th scope="col">Talle</th>

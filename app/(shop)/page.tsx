@@ -67,7 +67,7 @@ export default async function Home() {
         </div>
         <div className="editorial__body">
           <h2 id="ed-title" className="editorial__quote">
-            {settings.tagline || editorial.title}
+            {editorial.title}
           </h2>
           {editorial.text && <p>{editorial.text}</p>}
           <Link href="/tienda" className="btn" style={{ justifySelf: "start" }}>
