@@ -11,6 +11,37 @@ export type Mail = {
 
 export const emailEnabled = () => Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
 
+/**
+ * Cupo diario del proveedor (Resend gratis = 100 por día). 0 = sin tope (plan pago).
+ * Las novedades dejan siempre RESERVE mails libres para compras del resto del día.
+ */
+export const dailyLimit = () => {
+  const v = Number(process.env.EMAIL_DAILY_LIMIT ?? 100);
+  return Number.isFinite(v) && v >= 0 ? Math.floor(v) : 100;
+};
+const RESERVE = 25;
+
+async function takeQuota(want: number, bulk: boolean): Promise<number> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return want;
+  try {
+    const { serviceClient } = await import("../supabase/service");
+    const { data, error } = await serviceClient().rpc("email_quota_take", {
+      p_want: want,
+      p_limit: dailyLimit(),
+      p_reserve: RESERVE,
+      p_bulk: bulk,
+    });
+    if (error) throw new Error(error.message);
+    return typeof data === "number" ? data : bulk ? 0 : want;
+  } catch (e) {
+    console.error("email_quota_take", (e as Error).message);
+    return bulk ? 0 : want; // ante la duda, las compras salen y las novedades esperan
+  }
+}
+
+/** Cuántos mails de novedades se pueden mandar ahora (y los descuenta del cupo de hoy). */
+export const takeBulkQuota = (want: number) => takeQuota(want, true);
+
 /** Destinatarias de los avisos internos (separadas por coma en ADMIN_NOTIFY_EMAIL). */
 export const adminRecipients = () =>
   (process.env.ADMIN_NOTIFY_EMAIL ?? "")
@@ -35,6 +66,7 @@ function payload(m: Mail) {
 /** Envía un mail. Nunca lanza: un mail fallido no puede romper una compra. */
 export async function sendMail(m: Mail, idempotencyKey?: string): Promise<boolean> {
   if (!emailEnabled()) return false;
+  await takeQuota(Array.isArray(m.to) ? m.to.length : 1, false);
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",

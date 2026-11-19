@@ -11,9 +11,11 @@ import type { PaymentMethod, Settings, ShippingOption } from "@/lib/types";
 import { useCart } from "./CartProvider";
 
 type Errors = Record<string, string>;
+import { useTurnstile } from "@/components/useTurnstile";
 
 export function CheckoutForm({ settings, demo }: { settings: Settings; demo: boolean }) {
   const { lines, subtotal, ready, clear } = useCart();
+  const cf = useTurnstile("checkout");
   const { shipping, payments } = settings;
   const canDeliver = shipping.zones.some((z) => z.enabled) || shipping.carrier.enabled;
 
@@ -143,13 +145,15 @@ export function CheckoutForm({ settings, demo }: { settings: Settings; demo: boo
     };
     setSending(true);
     try {
+      const cf_token = await cf.getToken();
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, cf_token }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        cf.reset();
         if (data.shipping?.options) {
           setQuote({ state: "ok", options: data.shipping.options });
           setOption("");
@@ -506,6 +510,7 @@ export function CheckoutForm({ settings, demo }: { settings: Settings; demo: boo
           <Link href="/ayuda/privacidad">política de privacidad</Link>.
         </p>
       </aside>
+      {cf.slot}
     </form>
   );
 }

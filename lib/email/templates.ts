@@ -121,7 +121,7 @@ ${o.kicker ? `<p style="margin:0 0 12px;font-family:${SANS};font-size:12px;font-
 ${o.body}
 </td></tr>
 <tr><td style="padding:28px 24px 0;text-align:center;font-family:${SANS};font-size:13px;line-height:1.7;color:${C.footer}">
-<div style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:26px;color:#ffffff;margin-bottom:10px">Beibi.doll</div>
+<div style="margin-bottom:10px"><img src="${SITE_URL}/email/logo.png" width="140" height="51" alt="Beibi Doll" style="display:inline-block;width:140px;height:auto;border:0;font-family:Georgia,serif;font-style:italic;font-size:24px;color:#ffffff"></div>
 <div>${links}</div>
 <div style="margin-top:14px">${esc(o.footerNote)}</div>
 ${o.unsubscribeUrl ? `<div style="margin-top:8px"><a href="${esc(o.unsubscribeUrl)}" style="color:${C.footer};text-decoration:underline">Darme de baja de las novedades</a></div>` : ""}
@@ -389,6 +389,59 @@ export function adminWithdrawal(r: { name: string; email: string; order_number: 
     footerNote: "Aviso automático del panel de Beibi Doll.",
   });
   return { subject: `Arrepentimiento del pedido #${r.order_number}`, html, text: `Arrepentimiento ${r.code}, pedido #${r.order_number}` };
+}
+
+/** Aviso de seguridad: cambiaron los datos con los que se cobra. */
+export function adminPaymentsChanged(
+  r: { by: string; at: string; changes: [string, string, string][] },
+  s: Settings,
+) {
+  const rows = r.changes
+    .map(
+      ([k, a, b]) =>
+        `<tr><td style="padding:6px 0;font-family:${SANS};font-size:14px;color:${C.mute};vertical-align:top;width:34%">${esc(k)}</td><td style="padding:6px 0;font-family:${SANS};font-size:14px;color:${C.ink}"><s style="color:${C.mute}">${esc(a || "(vacío)")}</s><br><b>${esc(b || "(vacío)")}</b></td></tr>`,
+    )
+    .join("");
+  const html = layout({
+    preheader: "Revisá que hayas sido vos",
+    kicker: "Aviso de seguridad",
+    title: "Cambiaron los datos de cobro",
+    body:
+      paragraph(`Se modificaron los medios de pago de la tienda desde la cuenta ${r.by} (${r.at}).`) +
+      note(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table>`) +
+      paragraph(
+        "Si fuiste vos, no hace falta hacer nada. Si no reconocés el cambio: entrá al panel, corregí los datos, cambiá tu contraseña y avisale a quien te armó la tienda.",
+      ) +
+      button("Revisar en el panel", `${SITE_URL}/admin/ajustes`),
+    settings: s,
+    footerNote: "Aviso automático de seguridad de Beibi Doll.",
+  });
+  return {
+    subject: "Aviso de seguridad: cambiaron los datos de cobro",
+    html,
+    text: toText([
+      `Se modificaron los medios de pago desde ${r.by} (${r.at}).`,
+      ...r.changes.map(([k, a, b]) => `${k}: ${a || "(vacío)"} -> ${b || "(vacío)"}`),
+      "Si no fuiste vos, entrá al panel y corregilo.",
+      `${SITE_URL}/admin/ajustes`,
+    ]),
+  };
+}
+
+/** Aviso interno cuando algo falla (checkout, pagos). */
+export function adminSystemAlert(r: { what: string; detail: string; at: string }, s: Settings) {
+  const html = layout({
+    preheader: r.what,
+    kicker: "Aviso del sistema",
+    title: "Algo falló en la tienda",
+    body:
+      paragraph(r.what) +
+      note(`<span style="font-family:Menlo,Consolas,monospace;font-size:12px;word-break:break-all">${esc(r.detail)}</span>`) +
+      paragraph(`Momento: ${r.at}. Si se repite, avisale a quien te armó la tienda con este mail.`),
+    settings: s,
+    footerNote: "Aviso automático del sistema. Se manda como máximo uno por hora por tipo de error.",
+  });
+  return { subject: `Aviso: ${r.what}`.slice(0, 150), html, text: `${r.what}\n${r.detail}\n${r.at}` };
 }
 
 /* ---------------------------- Novedades ---------------------------- */

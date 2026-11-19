@@ -1,6 +1,7 @@
 import "server-only";
-import { timingSafeEqual } from "node:crypto";
-import { SITE_URL } from "./config";
+import { createHash, timingSafeEqual } from "node:crypto";
+import { isDemo, SITE_URL } from "./config";
+import { serviceClient } from "./supabase/service";
 
 /** Rechaza pedidos POST que no vengan desde nuestro propio sitio. */
 export function sameOrigin(req: Request) {
@@ -16,12 +17,14 @@ export function sameOrigin(req: Request) {
 }
 
 export function clientIp(req: Request) {
-  return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "local";
+  // En Vercel estas cabeceras las pone la plataforma (el navegador no las puede falsificar)
+  const v = req.headers.get("x-vercel-forwarded-for") ?? req.headers.get("x-real-ip") ?? req.headers.get("x-forwarded-for") ?? "";
+  return v.split(",")[0].trim() || "local";
 }
 
 /**
- * Límite simple en memoria por instancia. Frena abusos básicos; para algo
- * estricto entre instancias conviene el firewall de Vercel.
+ * Límite en memoria por instancia: sólo de respaldo (vista previa o si la base
+ * no responde). El límite real es `limit()`, compartido entre servidores.
  */
 const buckets = new Map<string, { n: number; reset: number }>();
 export function rateLimit(key: string, limit: number, windowMs: number) {
@@ -40,4 +43,30 @@ export function safeEqual(a: string, b: string) {
   const x = Buffer.from(a);
   const y = Buffer.from(b);
   return x.length === y.length && timingSafeEqual(x, y);
+}
+
+/** Resume la clave (IP + acción) para no guardar IPs en claro en la base. */
+function hashKey(key: string) {
+  const salt = process.env.RATE_LIMIT_SALT || process.env.SUPABASE_SERVICE_ROLE_KEY || "beibi";
+  return createHash("sha256").update(`${salt}:${key}`).digest("base64url").slice(0, 43);
+}
+
+/**
+ * Límite de intentos compartido entre todas las instancias (vive en Postgres).
+ * Si la base no responde, cae al límite en memoria en vez de dejar pasar todo.
+ */
+export async function limit(key: string, max: number, windowMs: number): Promise<boolean> {
+  if (isDemo || !process.env.SUPABASE_SERVICE_ROLE_KEY) return rateLimit(key, max, windowMs);
+  try {
+    const { data, error } = await serviceClient().rpc("rate_hit", {
+      p_key: hashKey(key),
+      p_limit: max,
+      p_window_s: Math.max(1, Math.round(windowMs / 1000)),
+    });
+    if (error) throw new Error(error.message);
+    return data === true;
+  } catch (e) {
+    console.error("rate_hit", (e as Error).message);
+    return rateLimit(key, max, windowMs);
+  }
 }

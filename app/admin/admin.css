@@ -965,3 +965,77 @@ a.stat:hover {
     grid-column: auto;
   }
 }
+
+/* ---------- Verificación en dos pasos ---------- */
+.mfa__center {
+  text-align: center;
+  justify-self: center;
+  max-width: 36ch;
+}
+.mfa__steps {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: var(--t-sm);
+  color: var(--sea-soft);
+}
+.mfa__steps li::marker {
+  color: var(--gold-ink);
+  font-weight: 700;
+}
+.mfa__steps b {
+  color: var(--sea);
+}
+.mfa__qr {
+  display: block;
+  width: fit-content;
+  margin: 12px auto 4px;
+  padding: 10px;
+  background: #fff; /* el QR necesita fondo claro para escanearse */
+  border-radius: 12px;
+  line-height: 0;
+}
+.mfa__qr img {
+  width: 184px;
+  height: 184px;
+  image-rendering: pixelated;
+}
+.mfa__alt {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.mfa__alt a {
+  color: var(--gold-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.mfa__secret {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.mfa__secret code {
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: var(--sea);
+  overflow-wrap: anywhere;
+}
+.mfa__code {
+  font-size: 1.5rem;
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.mfa__help {
+  font-size: var(--t-xs);
+  color: var(--sea-mute);
+  text-align: center;
+  margin: 0;
+}

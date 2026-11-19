@@ -1,7 +1,8 @@
 import { after, NextResponse } from "next/server";
 import { notifyWithdrawal } from "@/lib/email/notify";
 import { isDemo } from "@/lib/config";
-import { clientIp, rateLimit, sameOrigin } from "@/lib/security";
+import { clientIp, limit, sameOrigin } from "@/lib/security";
+import { verifyTurnstile } from "@/lib/turnstile";
 import { serviceClient } from "@/lib/supabase/service";
 import { withdrawalSchema } from "@/lib/validation";
 
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "Origen no permitido" }, { status: 403 });
-  if (!rateLimit(`arrep:${clientIp(req)}`, 5, 60 * 60 * 1000)) {
+  if (!(await limit(`arrep:${clientIp(req)}`, 5, 60 * 60 * 1000))) {
     return NextResponse.json({ error: "Hiciste muchos intentos. Probá más tarde." }, { status: 429 });
   }
   let json: unknown;
@@ -19,6 +20,9 @@ export async function POST(req: Request) {
     json = JSON.parse(raw);
   } catch {
     return NextResponse.json({ error: "Formato inválido" }, { status: 400 });
+  }
+  if (!(await verifyTurnstile((json as { cf_token?: unknown } | null)?.cf_token, clientIp(req)))) {
+    return NextResponse.json({ error: "No pudimos verificar que seas una persona. Recargá la página e intentá de nuevo." }, { status: 403 });
   }
   const parsed = withdrawalSchema.safeParse(json);
   if (!parsed.success) {

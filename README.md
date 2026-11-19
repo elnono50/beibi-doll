@@ -9,9 +9,12 @@ Sin variables de entorno el sitio arranca en **vista previa**: catálogo y fotos
 1. **Supabase**: crear un proyecto (región São Paulo) y correr, en el SQL Editor y en orden:
    - `supabase/migrations/0001_init.sql`
    - `supabase/migrations/0002_seed.sql`
+   - `supabase/migrations/0003_security.sql`
 2. **Auth de Supabase**
    - Authentication > Sign In / Providers > Email: dejar activado "Allow new users to sign up" (las clientas crean su cuenta) y "Confirm email".
-   - Authentication > Policies (o Passwords): mínimo 10 caracteres.
+   - Authentication > Policies (o Passwords): mínimo 10 caracteres, letras y números, y activar **Require current password when changing password**.
+   - Authentication > Multi-Factor: dejar **App Authenticator (TOTP)** habilitado (viene así). El panel obliga a usarlo.
+   - Authentication > Attack Protection: activar **CAPTCHA** con Cloudflare Turnstile y pegar la Secret Key (la misma de `TURNSTILE_SECRET_KEY`).
    - Authentication > Users > Add user: crear la cuenta de Fernanda con email y contraseña.
    - URL Configuration: Site URL = dominio final; Redirect URLs = `https://DOMINIO/cuenta/callback`, `https://DOMINIO/cuenta/restablecer` y `https://DOMINIO/admin/restablecer`.
    - Darle permiso de administradora:
@@ -54,6 +57,29 @@ Mails automáticos a la clienta: pedido recibido (transferencia o efectivo), pag
 - La reposición desde el panel suma diferencias (no pisa ventas que entren mientras edita).
 
 ## Seguridad
+
+### Panel: verificación en dos pasos (obligatoria)
+- Después de la contraseña, el panel pide el código de 6 números de una app del celular (Google o Microsoft Authenticator). La primera vez muestra un QR para vincularla.
+- No es sólo una pantalla: la base (`is_admin()`) exige sesión `aal2`, así que sin el código no se puede leer ni cambiar nada aunque alguien tenga la contraseña.
+- Si Fernanda pierde el celular, se reinicia desde el SQL Editor y vuelve a vincular al entrar:
+  ```sql
+  delete from auth.mfa_factors
+  where user_id = (select id from auth.users where email = 'EMAIL_DE_FERNANDA');
+  ```
+- Cada cambio en los medios de pago (alias, CBU, titular…) queda registrado (`audit_log`, visible en Mi cuenta) y manda un mail de aviso.
+
+### Anti-abusos
+- Límite de intentos compartido entre servidores (tabla `rate_limits`, IP resumida con hash).
+- Cloudflare Turnstile invisible en checkout, suscripción, avisos de stock, arrepentimiento, login y registro. Sin las claves queda apagado.
+- Cupo diario de mails: las novedades nunca dejan sin mails a las compras; lo que no entra sale solo en los días siguientes (`EMAIL_DAILY_LIMIT`).
+- Avisos por mail a la tienda si falla una compra, Mercado Pago no responde o llega un pago que no coincide con el pedido (máx. uno por hora por tipo).
+
+### GitHub
+- **Dependabot** (`.github/dependabot.yml`): PRs semanales con actualizaciones.
+- **Revisión** (`.github/workflows/ci.yml`): tipos, build y `npm audit` en cada cambio.
+- **Backup de la base** (`.github/workflows/backup.yml`): diario y cifrado. Cargar los secrets `SUPABASE_DB_URL` (Session pooler) y `BACKUP_PASSPHRASE`. Cómo restaurar: `docs/RESTAURAR.md`.
+
+### Resto
 
 - RLS en todas las tablas. El público sólo lee productos activos y ajustes.
 - Los pedidos se crean únicamente desde el servidor; precios, descuentos, tarifas y peso se recalculan en Postgres.

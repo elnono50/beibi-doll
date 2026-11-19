@@ -13,10 +13,12 @@ export function useSave() {
       start(async () => {
         const r = await fn();
         if (r.ok) {
-          setMsg({ text: okText, tone: "ok" });
-          flash(okText);
+          const text = r.notice ?? okText;
+          setMsg({ text, tone: "ok" });
+          flash(r.notice ? "Envío en curso" : okText);
           onOk?.(r);
-          window.setTimeout(() => setMsg((m) => (m?.tone === "ok" ? null : m)), 3500);
+          // los avisos largos quedan a la vista; los "guardado" se van solos
+          if (!r.notice) window.setTimeout(() => setMsg((m) => (m?.tone === "ok" ? null : m)), 3500);
         } else setMsg({ text: r.error, tone: "error" });
       });
     },

@@ -2437,3 +2437,12 @@ main:has(.tag-stage) + .news {
     width: 100%;
   }
 }
+
+/* Anti-bots (Cloudflare Turnstile): sólo ocupa lugar si pide interacción */
+.cf-box:empty {
+  display: none;
+}
+.cf-box {
+  grid-column: 1 / -1;
+  min-height: 0;
+}

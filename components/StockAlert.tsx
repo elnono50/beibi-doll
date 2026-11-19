@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTurnstile } from "@/components/useTurnstile";
 import { variantLabel } from "@/lib/stock";
 import type { Variant } from "@/lib/types";
 
@@ -8,6 +9,7 @@ export function StockAlert({ soldOut, openByDefault }: { soldOut: Variant[]; ope
   const [open, setOpen] = useState(Boolean(openByDefault));
   const [variant, setVariant] = useState(soldOut[0]?.id ?? "");
   const [state, setState] = useState<{ sending?: boolean; done?: string; error?: string }>({});
+  const cf = useTurnstile("aviso_stock");
   if (!soldOut.length) return null;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -15,6 +17,7 @@ export function StockAlert({ soldOut, openByDefault }: { soldOut: Variant[]; ope
     const fd = new FormData(e.currentTarget);
     setState({ sending: true });
     try {
+      const cf_token = await cf.getToken();
       const res = await fetch("/api/aviso-stock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -23,9 +26,11 @@ export function StockAlert({ soldOut, openByDefault }: { soldOut: Variant[]; ope
           variant_id: variant,
           newsletter: fd.get("newsletter") === "1",
           website: fd.get("website"),
+          cf_token,
         }),
       });
       const data = await res.json().catch(() => ({}));
+      cf.reset();
       if (!res.ok) setState({ error: data.error || "No pudimos guardar el aviso." });
       else setState({ done: data.message });
     } catch {
@@ -90,6 +95,7 @@ export function StockAlert({ soldOut, openByDefault }: { soldOut: Variant[]; ope
             {state.sending ? "Guardando…" : "Avisarme"}
           </button>
           <small className="muted">Te mandamos un solo mail cuando vuelva. Nada más.</small>
+          {cf.slot}
         </form>
       )}
     </div>

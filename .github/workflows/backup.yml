@@ -1,0 +1,63 @@
+# Copia de seguridad diaria de la base (el plan gratis de Supabase no trae backups).
+# Queda cifrada con BACKUP_PASSPHRASE: aunque alguien baje el archivo, no puede leerlo.
+#
+# Secrets del repo (Settings > Secrets and variables > Actions):
+#   SUPABASE_DB_URL     Supabase > Connect > Session pooler (puerto 5432), con la contraseña de la base
+#   BACKUP_PASSPHRASE   frase larga; guardarla en un gestor de contraseñas
+#
+# Restaurar:  gpg -d backup.tar.gz.gpg | tar xz   y seguir docs/RESTAURAR.md
+name: Backup de la base
+
+on:
+  schedule:
+    - cron: "30 6 * * *" # 03:30 en Argentina
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: ¿Está configurado?
+        id: cfg
+        run: |
+          if [ -z "$DB_URL" ] || [ -z "$PASS" ]; then
+            echo "::warning::Backup sin configurar: faltan SUPABASE_DB_URL o BACKUP_PASSPHRASE"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: supabase/setup-cli@v1
+        if: steps.cfg.outputs.ok == 'true'
+        with:
+          version: latest
+
+      - name: Exportar roles, estructura y datos
+        if: steps.cfg.outputs.ok == 'true'
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p dump
+          supabase db dump --db-url "$DB_URL" -f dump/roles.sql --role-only
+          supabase db dump --db-url "$DB_URL" -f dump/schema.sql
+          supabase db dump --db-url "$DB_URL" -f dump/data.sql --use-copy --data-only
+          tar czf backup.tar.gz dump
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASS" \
+              --symmetric --cipher-algo AES256 -o backup.tar.gz.gpg backup.tar.gz
+          rm -rf dump backup.tar.gz
+          ls -la backup.tar.gz.gpg
+
+      - uses: actions/upload-artifact@v4
+        if: steps.cfg.outputs.ok == 'true'
+        with:
+          name: beibi-doll-db-${{ github.run_id }}
+          path: backup.tar.gz.gpg
+          retention-days: 14
+          if-no-files-found: error

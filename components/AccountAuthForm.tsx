@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { browserClient } from "@/lib/supabase/browser";
+import { useTurnstile } from "@/components/useTurnstile";
 
 type Mode = "login" | "signup" | "reset";
 
@@ -12,6 +13,7 @@ export function AccountAuthForm({ demo, initial = "login" }: { demo: boolean; in
   const [mode, setMode] = useState<Mode>(initial);
   const [msg, setMsg] = useState<{ text: string; tone: "error" | "ok" } | null>(null);
   const [busy, setBusy] = useState(false);
+  const cf = useTurnstile("cuenta");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -25,9 +27,11 @@ export function AccountAuthForm({ demo, initial = "login" }: { demo: boolean; in
     const password = String(fd.get("password") ?? "");
     const sb = browserClient();
     setBusy(true);
+    const captchaToken = await cf.getToken();
+    cf.reset();
 
     if (mode === "login") {
-      const { data: signed, error } = await sb.auth.signInWithPassword({ email, password });
+      const { data: signed, error } = await sb.auth.signInWithPassword({ email, password, options: { captchaToken } });
       if (error) setBusy(false);
       if (error) {
         setMsg({
@@ -43,7 +47,7 @@ export function AccountAuthForm({ demo, initial = "login" }: { demo: boolean; in
       // Si es administradora la llevamos al panel (el panel igual vuelve a verificarlo en el servidor)
       const { data: adm } = await sb.from("admins").select("user_id").eq("user_id", signed.user.id).maybeSingle();
       setBusy(false);
-      router.replace(adm ? "/admin" : "/cuenta");
+      router.replace(adm ? "/admin/2fa" : "/cuenta");
       router.refresh();
       return;
     }
@@ -63,6 +67,7 @@ export function AccountAuthForm({ demo, initial = "login" }: { demo: boolean; in
         email,
         password,
         options: {
+          captchaToken,
           emailRedirectTo: `${window.location.origin}/cuenta/callback`,
           data: {
             name: name.slice(0, 120),
@@ -96,7 +101,7 @@ export function AccountAuthForm({ demo, initial = "login" }: { demo: boolean; in
       return;
     }
 
-    await sb.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/cuenta/restablecer` });
+    await sb.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/cuenta/restablecer`, captchaToken });
     setBusy(false);
     setMsg({ tone: "ok", text: "Si hay una cuenta con ese email, te llega un enlace para crear una contraseña nueva." });
   }
@@ -192,6 +197,7 @@ export function AccountAuthForm({ demo, initial = "login" }: { demo: boolean; in
                 : "Enviar enlace"}
         </button>
       </form>
+      {cf.slot}
 
       <button
         type="button"

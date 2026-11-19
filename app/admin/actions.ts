@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { notifyOrder, notifyStockBack } from "@/lib/email/notify";
-import { emailEnabled, sendBatch, sendMail, type Mail } from "@/lib/email/send";
+import { adminRecipients, emailEnabled, sendMail } from "@/lib/email/send";
+import { nowAR } from "@/lib/email/alert";
+import { sendCampaignChunk } from "@/lib/email/campaign";
 import { toEmailProducts } from "@/lib/email/products";
-import { newsletter } from "@/lib/email/templates";
-import { normalizeProduct, PRODUCT_SELECT } from "@/lib/data";
-import type { Product } from "@/lib/types";
+import { adminPaymentsChanged, newsletter } from "@/lib/email/templates";
+import { getSettings, normalizeProduct, PRODUCT_SELECT } from "@/lib/data";
+import type { Product, Settings } from "@/lib/types";
 import { z } from "zod";
 import { DemoError, requireAdmin } from "@/lib/auth";
 import { isDemo, SITE_URL as SITE, SUPABASE_URL } from "@/lib/config";
@@ -16,7 +18,7 @@ import { PROVINCES } from "@/lib/format";
 import { mergeSettings } from "@/lib/defaults";
 import { sessionClient } from "@/lib/supabase/server";
 
-export type ActionResult = { ok: true; id?: string; sent?: number } | { ok: false; error: string };
+export type ActionResult = { ok: true; id?: string; sent?: number; notice?: string } | { ok: false; error: string };
 
 const allowedHosts = () => {
   const hosts = ["images.unsplash.com"];
@@ -332,8 +334,44 @@ export async function saveSettings(partial: Partial<SettingsInput>): Promise<Act
     }
     const { error } = await db.from("settings").update({ data: valid }).eq("id", 1);
     if (error) throw new Error(error.message);
+    const changes = paymentChanges(mergeSettings(row?.data).payments, valid.payments as Settings["payments"]);
+    if (changes.length) {
+      const { data: auth } = await db.auth.getUser();
+      after(() => notifyPaymentsChanged(auth.user?.email ?? "", changes));
+    }
     refresh();
   });
+}
+
+/** Diferencias en los datos con los que se cobra (lo que un atacante querría cambiar). */
+function paymentChanges(a: Settings["payments"], b: Settings["payments"]): [string, string, string][] {
+  const out: [string, string, string][] = [];
+  const t = (x: string, y: string, label: string) => {
+    if ((x ?? "").trim() !== (y ?? "").trim()) out.push([label, x ?? "", y ?? ""]);
+  };
+  const on = (v: boolean) => (v ? "Activo" : "Apagado");
+  t(a.transfer.alias, b.transfer.alias, "Alias");
+  t(a.transfer.cbu, b.transfer.cbu, "CBU / CVU");
+  t(a.transfer.holder, b.transfer.holder, "Titular");
+  t(a.transfer.bank, b.transfer.bank, "Banco");
+  t(a.transfer.cuit, b.transfer.cuit, "CUIT");
+  t(on(a.transfer.enabled), on(b.transfer.enabled), "Transferencia");
+  t(on(a.mercadopago.enabled), on(b.mercadopago.enabled), "Mercado Pago");
+  t(on(a.cash.enabled), on(b.cash.enabled), "Efectivo");
+  return out;
+}
+
+async function notifyPaymentsChanged(by: string, changes: [string, string, string][]) {
+  try {
+    if (!emailEnabled()) return;
+    const to = [...new Set([by, ...adminRecipients()].filter(Boolean))];
+    if (!to.length) return;
+    const settings = await getSettings();
+    const m = adminPaymentsChanged({ by: by || "una administradora", at: nowAR(), changes }, settings);
+    await sendMail({ to, ...m });
+  } catch (e) {
+    console.error("payments alert", (e as Error).message);
+  }
 }
 
 /* ----------------------------- Pedidos ----------------------------- */
@@ -453,36 +491,37 @@ export async function sendNewsletter(input: CampaignInput, mode: "test" | "all")
       return ok ? { ok: true, sent: 1 } : { ok: false, error: "No se pudo enviar la prueba. Intentá de nuevo en unos minutos." };
     }
 
-    const { data: subs, error } = await db
+    const { count, error } = await db
       .from("subscribers")
-      .select("email, unsubscribe_token")
-      .is("unsubscribed_at", null)
-      .limit(5000);
+      .select("id", { count: "exact", head: true })
+      .is("unsubscribed_at", null);
     if (error) throw new Error(error.message);
-    if (!subs?.length) return { ok: false, error: "Todavía no hay suscriptas activas." };
+    if (!count) return { ok: false, error: "Todavía no hay suscriptas activas." };
 
     const { data: camp, error: cErr } = await db
       .from("email_campaigns")
-      .insert({ subject: c.subject, title: c.title, content: c, recipients: subs.length, created_by: auth.user?.id })
+      .insert({ subject: c.subject, title: c.title, content: c, recipients: count, created_by: auth.user?.id, status: "sending" })
       .select("id")
       .single();
     if (cErr) throw new Error(cErr.message);
 
-    const mails: Mail[] = subs.map((sub) => {
-      const unsub = `${SITE}/baja?t=${sub.unsubscribe_token}`;
-      return {
-        to: sub.email,
-        ...newsletter(content, settings, unsub),
-        headers: {
-          "List-Unsubscribe": `<${SITE}/api/baja?t=${sub.unsubscribe_token}>`,
-          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
-      };
-    });
-    const res = await sendBatch(mails, `campaign-${camp.id}`);
-    await db.from("email_campaigns").update({ sent: res.sent, error: res.error ?? null }).eq("id", camp.id);
+    // Se manda lo que permite el cupo de hoy; el resto sale solo los días siguientes
+    let sent = 0;
+    let last: Awaited<ReturnType<typeof sendCampaignChunk>> | null = null;
+    for (let i = 0; i < 20; i++) {
+      last = await sendCampaignChunk(db, camp.id);
+      sent += last.sent;
+      if (last.done || last.waiting || last.error || last.sent === 0) break;
+    }
     revalidatePath("/admin/novedades");
-    if (res.error) return { ok: false, error: `Se enviaron ${res.sent} de ${subs.length}. ${res.error}` };
-    return { ok: true, sent: res.sent };
+    if (last?.error) return { ok: false, error: `Se enviaron ${sent} de ${count}. ${last.error}` };
+    if (last && !last.done) {
+      return {
+        ok: true,
+        sent,
+        notice: `Salieron ${sent} de ${count} hoy. El plan de mails permite una cantidad por día: el resto sale solo en los próximos días.`,
+      };
+    }
+    return { ok: true, sent };
   });
 }

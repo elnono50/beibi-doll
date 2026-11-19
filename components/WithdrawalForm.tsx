@@ -1,21 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import { useTurnstile } from "@/components/useTurnstile";
 
 export function WithdrawalForm() {
   const [state, setState] = useState<{ code?: string; error?: string; sending?: boolean }>({});
+  const cf = useTurnstile("arrepentimiento");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     setState({ sending: true });
     try {
+      const cf_token = await cf.getToken();
       const res = await fetch("/api/arrepentimiento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(Object.fromEntries(fd.entries())),
+        body: JSON.stringify({ ...Object.fromEntries([...fd.entries()].filter(([k]) => !k.startsWith("cf-"))), cf_token }),
       });
       const data = await res.json().catch(() => ({}));
+      cf.reset();
       if (!res.ok) setState({ error: data.error || "No pudimos registrar la solicitud. Intentá de nuevo." });
       else setState({ code: data.code });
     } catch {
@@ -67,6 +71,7 @@ export function WithdrawalForm() {
           {state.sending ? "Enviando…" : "Enviar solicitud de arrepentimiento"}
         </button>
       </div>
+      {cf.slot}
     </form>
   );
 }

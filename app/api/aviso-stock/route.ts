@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isDemo } from "@/lib/config";
-import { clientIp, rateLimit, sameOrigin } from "@/lib/security";
+import { clientIp, limit, sameOrigin } from "@/lib/security";
+import { verifyTurnstile } from "@/lib/turnstile";
 import { serviceClient } from "@/lib/supabase/service";
 import { variantIdSchema } from "@/lib/validation";
 
@@ -23,7 +24,7 @@ const MSG: Record<string, [number, string]> = {
 
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "Origen no permitido" }, { status: 403 });
-  if (!rateLimit(`alert:${clientIp(req)}`, 10, 60 * 60 * 1000)) {
+  if (!(await limit(`alert:${clientIp(req)}`, 10, 60 * 60 * 1000))) {
     return NextResponse.json({ error: "Hiciste muchos intentos. Probá más tarde." }, { status: 429 });
   }
   let json: unknown;
@@ -33,6 +34,9 @@ export async function POST(req: Request) {
     json = JSON.parse(raw);
   } catch {
     return NextResponse.json({ error: "Formato inválido" }, { status: 400 });
+  }
+  if (!(await verifyTurnstile((json as { cf_token?: unknown } | null)?.cf_token, clientIp(req)))) {
+    return NextResponse.json({ error: "No pudimos verificar que seas una persona. Recargá la página e intentá de nuevo." }, { status: 403 });
   }
   const parsed = schema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Revisá los datos" }, { status: 422 });

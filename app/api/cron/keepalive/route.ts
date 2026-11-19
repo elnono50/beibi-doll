@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isDemo } from "@/lib/config";
 import { safeEqual } from "@/lib/security";
+import { resumeCampaigns } from "@/lib/email/campaign";
 import { notifyStockBack } from "@/lib/email/notify";
 import { publicClient } from "@/lib/supabase/public";
 import { serviceClient } from "@/lib/supabase/service";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 /**
  * Lo llama Vercel una vez por día (vercel.json). Una consulta liviana mantiene
  * activo el proyecto gratuito de Supabase, que se pausa tras 7 días sin uso.
+ * También retoma los envíos de novedades que quedaron esperando cupo.
  */
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -26,5 +28,11 @@ export async function GET(req: Request) {
     /* sin service role */
   }
   await notifyStockBack();
+  // Novedades que no entraron en el cupo de mails de ayer
+  try {
+    await resumeCampaigns(serviceClient());
+  } catch (e) {
+    console.error("resumeCampaigns", (e as Error).message);
+  }
   return NextResponse.json({ ok: !error });
 }

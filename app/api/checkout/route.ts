@@ -1,11 +1,13 @@
 import { revalidatePath } from "next/cache";
 import { after, NextResponse } from "next/server";
+import { alertAdmin } from "@/lib/email/alert";
 import { notifyOrder } from "@/lib/email/notify";
 import { isDemo } from "@/lib/config";
 import { getSettings } from "@/lib/data";
 import { createPreference, mpEnabled } from "@/lib/mercadopago";
 import { quoteShipping } from "@/lib/shipping";
-import { clientIp, rateLimit, sameOrigin } from "@/lib/security";
+import { clientIp, limit, sameOrigin } from "@/lib/security";
+import { verifyTurnstile } from "@/lib/turnstile";
 import { serviceClient } from "@/lib/supabase/service";
 import { sessionClient } from "@/lib/supabase/server";
 import { checkoutSchema } from "@/lib/validation";
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
   if (!req.headers.get("content-type")?.includes("application/json")) {
     return NextResponse.json({ error: "Formato inválido" }, { status: 415 });
   }
-  if (!rateLimit(`checkout:${clientIp(req)}`, 8, 10 * 60 * 1000)) {
+  if (!(await limit(`checkout:${clientIp(req)}`, 8, 10 * 60 * 1000))) {
     return NextResponse.json({ error: "Hiciste muchos intentos seguidos. Esperá unos minutos." }, { status: 429 });
   }
 
@@ -51,6 +53,10 @@ export async function POST(req: Request) {
     json = JSON.parse(raw);
   } catch {
     return NextResponse.json({ error: "Formato inválido" }, { status: 400 });
+  }
+
+  if (!(await verifyTurnstile((json as { cf_token?: unknown } | null)?.cf_token, clientIp(req)))) {
+    return NextResponse.json({ error: "No pudimos verificar que seas una persona. Recargá la página e intentá de nuevo." }, { status: 403 });
   }
 
   const parsed = checkoutSchema.safeParse(json);
@@ -110,8 +116,12 @@ export async function POST(req: Request) {
   const payload = { ...rest, shipping };
   const { data, error } = await db.rpc("create_order", { p: payload });
   if (error || !data) {
-    console.error("create_order", error?.message);
-    return NextResponse.json({ error: friendly(error?.message ?? "") }, { status: 409 });
+    const msg = error?.message ?? "";
+    console.error("create_order", msg);
+    // Errores esperables (sin stock, datos inválidos) no son una falla; lo demás sí
+    const known = /sin_stock:/.test(msg) || Object.keys(ERRORS).some((k) => msg.includes(k));
+    if (!known) after(() => alertAdmin("create_order", "Una compra no se pudo crear", msg || "sin detalle"));
+    return NextResponse.json({ error: friendly(msg) }, { status: 409 });
   }
 
   const order = data as {
@@ -164,6 +174,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ redirect: pref.init_point });
   } catch (e) {
     console.error("mp preference", (e as Error).message);
+    after(() => alertAdmin("mp_preference", "Mercado Pago no respondió al iniciar un pago", e));
     await db.rpc("system_cancel_order", { p_order_id: order.id });
     return NextResponse.json(
       { error: "Mercado Pago no respondió. No se cobró nada: probá de nuevo o elegí transferencia." },

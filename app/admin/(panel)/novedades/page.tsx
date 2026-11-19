@@ -3,7 +3,7 @@ import { NewsletterComposer } from "@/components/admin/NewsletterComposer";
 import { adminProducts, adminSettings } from "@/lib/admin-data";
 import { getAdmin } from "@/lib/auth";
 import { SITE_URL } from "@/lib/config";
-import { emailEnabled } from "@/lib/email/send";
+import { dailyLimit, emailEnabled } from "@/lib/email/send";
 import { dateTime } from "@/lib/format";
 import { listSubscribers } from "@/lib/subscribers";
 
@@ -19,6 +19,16 @@ export default async function NewsAdmin() {
     adminProducts(admin.supabase),
   ]);
   const active = rows.filter((r) => !r.unsubscribed_at);
+  const campaigns = admin.supabase
+    ? (
+        await admin.supabase
+          .from("email_campaigns")
+          .select("id, subject, recipients, sent, status, error, created_at")
+          .order("created_at", { ascending: false })
+          .limit(8)
+      ).data ?? []
+    : [];
+  const cap = dailyLimit();
 
   return (
     <>
@@ -61,6 +71,51 @@ export default async function NewsAdmin() {
         demo={admin.demo}
         enabled={emailEnabled()}
       />
+
+      {cap > 0 && (
+        <p className="panel__hint" style={{ marginTop: -8 }}>
+          Tu plan de mails permite {cap} envíos por día entre compras y novedades. Si la lista es más grande, las novedades
+          salen en tandas durante los días siguientes, sin que dejen de llegar los mails de las compras.
+        </p>
+      )}
+
+      {campaigns.length > 0 && (
+        <section className="panel">
+          <h2>Últimos envíos</h2>
+          <div className="table-wrap">
+            <table className="atable">
+              <thead>
+                <tr>
+                  <th scope="col">Asunto</th>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Enviados</th>
+                  <th scope="col">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {campaigns.map((c) => (
+                  <tr key={c.id}>
+                    <td>{c.subject}</td>
+                    <td>{dateTime(c.created_at)}</td>
+                    <td>
+                      {c.sent} de {c.recipients}
+                    </td>
+                    <td>
+                      {c.status === "sending" ? (
+                        <span className="status-pill status-pill--pending">{c.error ? "Con error, reintenta mañana" : "Sigue mañana"}</span>
+                      ) : c.status === "error" ? (
+                        <span className="status-pill status-pill--cancelled">Error</span>
+                      ) : (
+                        <span className="status-pill status-pill--delivered">Enviado</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section className="panel">
         <h2>Lista</h2>

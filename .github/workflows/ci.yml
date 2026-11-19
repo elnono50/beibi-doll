@@ -1,0 +1,34 @@
+# Revisa cada cambio antes de que llegue a la tienda: tipos, build y vulnerabilidades.
+name: Revisión
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Tipos
+        run: npm run typecheck
+      - name: Build (vista previa, sin claves)
+        run: npm run build
+      - name: Vulnerabilidades conocidas (altas o críticas)
+        run: npm audit --omit=dev --audit-level=high

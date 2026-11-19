@@ -22,15 +22,20 @@ export function PasswordForm({ email, demo }: { email: string; demo: boolean }) 
     if (next === current) return setMsg("Elegí una contraseña distinta a la actual.");
     setBusy(true);
     const sb = browserClient();
-    // Confirmamos la contraseña actual antes de cambiarla
-    const check = await sb.auth.signInWithPassword({ email, password: current });
-    if (check.error) {
-      setBusy(false);
-      return setMsg("La contraseña actual no es correcta.");
-    }
-    const { error } = await sb.auth.updateUser({ password: next });
+    // Supabase valida la contraseña actual (opción "Require current password" activada).
+    // No volvemos a iniciar sesión para no perder el segundo paso de la sesión.
+    const { error } = await sb.auth.updateUser({ password: next, current_password: current });
     setBusy(false);
-    if (error) return setMsg("No se pudo guardar. Probá con otra contraseña.");
+    if (error) {
+      const m = error.message.toLowerCase();
+      return setMsg(
+        m.includes("current") || m.includes("invalid")
+          ? "La contraseña actual no es correcta."
+          : m.includes("weak") || m.includes("pwned") || m.includes("leaked")
+            ? "Esa contraseña es débil o apareció en filtraciones. Elegí otra."
+            : "No se pudo guardar. Probá con otra contraseña.",
+      );
+    }
     form.reset();
     flash("Contraseña actualizada");
   }

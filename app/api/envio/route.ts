@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSettings } from "@/lib/data";
-import { clientIp, rateLimit, sameOrigin } from "@/lib/security";
+import { clientIp, limit, sameOrigin } from "@/lib/security";
 import { quoteShipping } from "@/lib/shipping";
 import { quoteSchema } from "@/lib/validation";
 
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 /** Cotiza el envío para el checkout. El precio final se recalcula al confirmar. */
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "Origen no permitido" }, { status: 403 });
-  if (!rateLimit(`envio:${clientIp(req)}`, 30, 10 * 60 * 1000)) {
+  if (!(await limit(`envio:${clientIp(req)}`, 30, 10 * 60 * 1000))) {
     return NextResponse.json({ error: "Muchas consultas seguidas. Esperá un momento." }, { status: 429 });
   }
   const raw = await req.text();

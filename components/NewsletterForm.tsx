@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useTurnstile } from "@/components/useTurnstile";
 
 export function NewsletterForm() {
   const [state, setState] = useState<"idle" | "sending" | "done">("idle");
   const [error, setError] = useState("");
+  const cf = useTurnstile("novedades");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -14,12 +16,14 @@ export function NewsletterForm() {
     if (!fd.get("consent")) return setError("Marcá la casilla para aceptar recibir novedades.");
     setState("sending");
     try {
+      const cf_token = await cf.getToken();
       const res = await fetch("/api/novedades", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: fd.get("email"), consent: true, website: fd.get("website") }),
+        body: JSON.stringify({ email: fd.get("email"), consent: true, website: fd.get("website"), cf_token }),
       });
       const data = await res.json().catch(() => ({}));
+      cf.reset();
       if (!res.ok) {
         setError(data.error || "No pudimos suscribirte. Intentá de nuevo.");
         setState("idle");
@@ -78,6 +82,7 @@ export function NewsletterForm() {
                 {error}
               </p>
             )}
+            {cf.slot}
           </form>
         )}
       </div>

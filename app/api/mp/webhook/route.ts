@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { after, NextResponse } from "next/server";
+import { alertAdmin } from "@/lib/email/alert";
 import { notifyOrder } from "@/lib/email/notify";
 import { getPayment, paymentMatches, verifyWebhookSignature } from "@/lib/mercadopago";
 import { serviceClient } from "@/lib/supabase/service";
@@ -41,12 +42,22 @@ export async function POST(req: Request) {
     });
     if (error) {
       console.error("mark_order_paid", error.message);
+      after(() => alertAdmin("mark_order_paid", "Un pago aprobado no se pudo registrar (Mercado Pago lo reintenta)", error.message));
       return NextResponse.json({ error: "reintentar" }, { status: 500 }); // MP reintenta
     }
     if (result === "ok") {
       revalidatePath("/admin", "layout");
       after(() => notifyOrder(order.id, "paid"));
     }
+  } else if (payment.status === "approved") {
+    // Pago aprobado que no coincide con el pedido (monto o moneda): posible intento de fraude
+    after(() =>
+      alertAdmin(
+        "mp_mismatch",
+        "Llegó un pago aprobado que no coincide con el pedido. No se marcó como pagado: revisalo en Mercado Pago.",
+        { pedido: order.id, pago: payment.id, monto: payment.transaction_amount, total: order.total },
+      ),
+    );
   } else if (payment.status === "rejected" || payment.status === "cancelled") {
     await db.from("orders").update({ mp_status: payment.status }).eq("id", order.id).eq("status", "pending");
   }
