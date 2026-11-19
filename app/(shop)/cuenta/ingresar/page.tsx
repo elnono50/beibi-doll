@@ -4,6 +4,7 @@ import { AccountAuthForm } from "@/components/AccountAuthForm";
 import { HangTag } from "@/components/HangTag";
 import { isDemo } from "@/lib/config";
 import { sessionClient } from "@/lib/supabase/server";
+import { Logo } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Ingresar o crear cuenta", robots: { index: false } };
@@ -21,7 +22,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
   return (
     <section className="tag-stage" aria-labelledby="auth-title">
       <HangTag swing className="tag-stage__wrap" tagClassName="tag-stage__tag">
-        <span className="pass__brand brand-script">Beibi.doll</span>
+        <Logo className="pass__brand" eager />
         <h1 id="auth-title">Tu cuenta</h1>
         <p className="tag-stage__lead">Seguí tus pedidos, comprá más rápido y enterate primero de las novedades.</p>
         {error === "enlace" && (

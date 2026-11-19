@@ -36,7 +36,6 @@
 
   --font-display: var(--f-anton), "Arial Narrow", Impact, sans-serif;
   --font-body: var(--f-inter), "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
-  --font-script: var(--f-script), "Brush Script MT", cursive;
 
   /* Escala tipográfica (razón ~1.25, redondeada a valores clásicos) */
   --t-xs: 0.75rem;
@@ -409,25 +408,13 @@ button.link {
   }
 }
 
-/* Logo en cursiva con destello */
-.brand-script {
-  position: relative;
-  display: inline-block;
-  font-family: var(--font-script);
-  font-weight: 400;
-  text-transform: none;
-  line-height: 1;
-  padding-right: 0.32em;
-}
-.brand-script::after {
-  content: "";
-  position: absolute;
-  top: 0.02em;
-  right: 0;
-  width: 0.3em;
-  height: 0.3em;
-  background: currentColor;
-  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+/* Logo (imagen). El alto lo fija cada lugar con --logo-h */
+.brand-logo {
+  display: block;
+  height: var(--logo-h, 48px);
+  width: auto;
+  max-width: 100%;
+  user-select: none;
 }
 
 /* Etiqueta de producto (oferta, últimas, sin stock): pegada en la foto */
@@ -546,11 +533,12 @@ button.link {
   border-bottom-color: var(--gold);
 }
 .logo {
+  --logo-h: 52px;
   justify-self: center;
-  font-size: 2.35rem;
+  display: inline-flex;
+  align-items: center;
   text-decoration: none;
-  padding-block: 2px 6px;
-  white-space: nowrap;
+  border-radius: 6px;
 }
 .header__actions {
   display: flex;
@@ -597,7 +585,7 @@ button.link {
     margin-left: -10px;
   }
   .logo {
-    font-size: 2rem;
+    --logo-h: 44px;
   }
   .bag-label {
     display: none;
@@ -1183,8 +1171,8 @@ button.link {
   margin-top: 14px;
 }
 .footer .logo {
-  font-size: 2.6rem;
-  color: var(--sea);
+  --logo-h: 76px;
+  margin-left: -4px;
 }
 .footer h3 {
   font-family: var(--font-body);
@@ -2280,9 +2268,9 @@ button.link {
   gap: 16px;
 }
 .pass__brand {
+  --logo-h: 68px;
   justify-self: center;
-  font-size: 2.6rem;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 .tag-stage__tag h1,
 .tag-stage .login__tag h1 {

@@ -16,12 +16,6 @@ const inter = localFont({
   display: "swap",
 });
 
-const script = localFont({
-  src: [{ path: "./fonts/great-vibes.woff2", style: "normal", weight: "400" }],
-  variable: "--f-script",
-  display: "swap",
-});
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: "Beibi Doll | Ropa con actitud", template: "%s | Beibi Doll" },
@@ -44,7 +38,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-AR" className={`${anton.variable} ${inter.variable} ${script.variable}`}>
+    <html lang="es-AR" className={`${anton.variable} ${inter.variable}`}>
       <body>
         {children}
         <Analytics />

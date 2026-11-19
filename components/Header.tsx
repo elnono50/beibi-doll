@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { useCart } from "./CartProvider";
 import { BagIcon, CloseIcon, MenuIcon, UserIcon } from "./Icons";
 import { useCustomer } from "./useCustomer";
+import { Logo } from "@/components/Logo";
 
 type NavItem = { href: string; label: string };
 
@@ -65,8 +66,8 @@ export function Header({ nav, whatsapp, instagram }: { nav: NavItem[]; whatsapp:
   const mobileMenu = (
     <div className="mobile-nav" role="dialog" aria-modal="true" aria-label="Menú">
       <div className="mobile-nav__top">
-        <Link href="/" className="logo brand-script" onClick={close} aria-label="Beibi Doll, inicio">
-          Beibi.doll
+        <Link href="/" className="logo" onClick={close} aria-label="Beibi Doll, inicio">
+          <Logo alt="" />
         </Link>
         <button className="icon-btn" aria-label="Cerrar menú" onClick={close} autoFocus>
           <CloseIcon />
@@ -124,8 +125,8 @@ export function Header({ nav, whatsapp, instagram }: { nav: NavItem[]; whatsapp:
           </button>
         </nav>
 
-        <Link href="/" className="logo brand-script" aria-label="Beibi Doll, inicio">
-          Beibi.doll
+        <Link href="/" className="logo" aria-label="Beibi Doll, inicio">
+          <Logo alt="" eager />
         </Link>
 
         <div className="header__actions">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Category, Settings } from "@/lib/types";
+import { Logo } from "@/components/Logo";
 
 export function Footer({ settings, categories }: { settings: Settings; categories: Category[] }) {
   const { contact, legal } = settings;
@@ -9,7 +10,7 @@ export function Footer({ settings, categories }: { settings: Settings; categorie
       <div className="wrap">
         <div className="footer__grid">
           <div className="footer__brand">
-            <span className="logo brand-script">Beibi.doll</span>
+            <span className="logo"><Logo /></span>
             <p>{settings.tagline ? `${settings.tagline.replace(/\.$/, "")}.` : "Ropa con actitud."} Local en San Juan, envíos a todo el país.</p>
           </div>
           <div>

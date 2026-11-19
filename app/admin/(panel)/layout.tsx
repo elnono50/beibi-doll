@@ -3,6 +3,7 @@ import { signOut } from "@/app/admin/actions";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { adminCounts } from "@/lib/admin-data";
 import { getAdmin } from "@/lib/auth";
+import { Logo } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     <div className="admin">
       <aside className="admin-side">
         <Link href="/admin" className="logo">
-          <span className="brand-script">Beibi.doll</span>
+          <Logo alt="Beibi Doll" eager />
           <small>Panel de la tienda</small>
         </Link>
         <nav aria-label="Panel">

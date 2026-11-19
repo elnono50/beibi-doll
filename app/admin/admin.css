@@ -18,10 +18,11 @@
   color: var(--sea-soft);
 }
 .admin-side .logo {
+  --logo-h: 54px;
+  display: block;
   justify-self: start;
   color: var(--sea);
-  font-size: 2.2rem;
-  padding-inline: 12px;
+  padding-inline: 8px;
   text-decoration: none;
 }
 .admin-side .logo small {
@@ -568,7 +569,7 @@ a.stat:hover {
     display: none;
   }
   .admin-side .logo {
-    font-size: 1.75rem;
+    --logo-h: 38px;
     padding: 0;
     flex: none;
   }

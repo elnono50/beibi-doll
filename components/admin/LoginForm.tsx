@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { HangTag } from "@/components/HangTag";
 import { browserClient } from "@/lib/supabase/browser";
+import { Logo } from "@/components/Logo";
 
 export function LoginForm({ demo }: { demo: boolean }) {
   const router = useRouter();
@@ -45,7 +46,7 @@ export function LoginForm({ demo }: { demo: boolean }) {
 
   return (
     <HangTag swing className="login__tag-wrap" tagClassName="login__tag">
-      <span className="pass__brand brand-script">Beibi.doll</span>
+      <Logo className="pass__brand" eager />
       <h1>{mode === "login" ? "Panel de la tienda" : "Recuperar acceso"}</h1>
       {demo && <p className="notice">Vista previa: entrás sin contraseña y los cambios no se guardan.</p>}
       <form className="form-stack" onSubmit={onSubmit}>
