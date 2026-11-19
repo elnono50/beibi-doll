@@ -116,7 +116,7 @@ const seeds: Seed[] = [
     featured: true,
     imgs: [
       ["1762164130276-021d7c91cd89", "Jean holgado azul con campera de cuero", "Azul gastado"],
-      ["1788200366432-d027e8961bee", "Jean holgado azul sentada en un muelle", "Azul gastado"],
+      ["1788200588452-a0f4ecbf7622", "Jean holgado azul sentada en bloques de cemento", "Azul gastado"],
     ],
     sizes: JEAN,
     rows: [
@@ -178,8 +178,8 @@ const seeds: Seed[] = [
     care: "Lavar con agua fría.\nNo usar secarropas.",
     featured: false,
     imgs: [
-      ["1788200588504-daccfcb28860", "Remera corta negra con jean", "Negro"],
-      ["1788200588452-a0f4ecbf7622", "Remera corta negra sentada en bloques de cemento", "Negro"],
+      ["1788200366432-d027e8961bee", "Remera corta negra con anteojos de sol", "Negro"],
+      ["1788200588411-0d6bc9e6159f", "Remera corta negra sentada en un bolardo", "Negro"],
     ],
     sizes: LETRAS,
     rows: [

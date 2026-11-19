@@ -830,6 +830,32 @@ p {
   background: rgba(13, 12, 14, 0.4);
   color: var(--sea);
 }
+/* En compu las fotos (casi siempre verticales) van a la derecha y el texto a la izquierda */
+@media (min-width: 900px) {
+  .hero__img {
+    left: 36%;
+  }
+  .hero__img::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 28%;
+    background: linear-gradient(90deg, var(--sky-100), transparent);
+    z-index: 1;
+  }
+  .hero__slide::after {
+    background: linear-gradient(180deg, transparent 60%, rgba(13, 12, 14, 0.7));
+  }
+  .hero__copy {
+    inset: 0 auto 0 0;
+    width: 100%;
+    align-content: center;
+    padding-block: 0 40px;
+  }
+  .hero__text {
+    max-width: 34ch;
+  }
+}
 @media (max-width: 760px) {
   .hero {
     height: min(calc(100svh - var(--header-h) - 34px), 760px);
