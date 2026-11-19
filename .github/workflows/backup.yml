@@ -54,7 +54,7 @@ jobs:
           rm -rf dump backup.tar.gz
           ls -la backup.tar.gz.gpg
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: steps.cfg.outputs.ok == 'true'
         with:
           name: beibi-doll-db-${{ github.run_id }}
